@@ -3,104 +3,341 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reproductor sin Publicidad</title>
+    <title>Video Embedder Sin Publicidad</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
             background-color: #f0f0f0;
         }
-        header {
-            background-color: #333;
-            color: white;
-            text-align: center;
-            padding: 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: 20px auto;
+        #videoContainer {
             background-color: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        input[type="text"] {
+        #videoUrlInput {
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
         }
-        button {
+        .button {
             background-color: #4CAF50;
             color: white;
-            padding: 10px 15px;
             border: none;
-            border-radius: 4px;
+            padding: 10px 20px;
             cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
         }
-        button:hover {
-            background-color: #45a049;
+        .button.secondary {
+            background-color: #2196F3;
         }
-        .result {
+        #resultContainer {
             margin-top: 20px;
         }
-        .embed-code {
-            background-color: #f9f9f9;
-            border: 1px solid #ccc;
-            padding: 10px;
-            border-radius: 4px;
-            white-space: pre-wrap;
+        .result-section {
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin-top: 10px;
+        }
+        iframe {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ddd;
+        }
+        #errorMessage {
+            color: red;
+            margin-top: 10px;
+        }
+        #copyEmbedButton, #copyUrlButton {
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Generar Reproductor sin Publicidad</h1>
-    </header>
-    <div class="container">
-        <label for="videoLink">Ingresa el enlace del video:</label>
-        <input type="text" id="videoLink" placeholder="Ejemplo: https://nuuuppp.biz/watch/dB3jz3bC7kz74fg7U9M0vH0mzBJcYeCt5IjthVLMi2BJoakPg">
-        <button onclick="generateEmbedCode()">Generar Video sin Publicidad</button>
-        
-        <div class="result" id="resultContainer">
-            <!-- Aquí aparecerán los resultados -->
+    <div id="videoContainer">
+        <h1>Embedder de Videos Sin Publicidad</h1>
+        <input type="text" id="videoUrlInput" placeholder="Pega aquí el enlace del video">
+        <div>
+            <button id="processEmbedButton" class="button">Generar Embed</button>
+            <button id="processUrlButton" class="button secondary">Generar URL Limpia</button>
+        </div>
+        <div id="errorMessage"></div>
+
+        <div id="resultContainer">
+            <div id="embedResultSection" class="result-section" style="display:none;">
+                <h2>Código Embed:</h2>
+                <div id="processedVideo"></div>
+                <textarea id="embedCodeArea" readonly placeholder="El código embed aparecerá aquí"></textarea>
+                <button id="copyEmbedButton" class="button">Copiar Embed</button>
+            </div>
+
+            <div id="urlResultSection" class="result-section" style="display:none;">
+                <h2>URL Limpia Sin Publicidad:</h2>
+                <textarea id="cleanUrlArea" readonly placeholder="La URL limpia aparecerá aquí"></textarea>
+                <button id="copyUrlButton" class="button">Copiar URL</button>
+            </div>
         </div>
     </div>
 
     <script>
-        function generateEmbedCode() {
-            const videoLink = document.getElementById("videoLink").value;
-            if (videoLink === "") {
-                alert("Por favor ingresa un enlace de video.");
-                return;
+        const videoUrlInput = document.getElementById('videoUrlInput');
+        const processEmbedButton = document.getElementById('processEmbedButton');
+        const processUrlButton = document.getElementById('processUrlButton');
+        const processedVideo = document.getElementById('processedVideo');
+        const embedCodeArea = document.getElementById('embedCodeArea');
+        const cleanUrlArea = document.getElementById('cleanUrlArea');
+        const errorMessage = document.getElementById('errorMessage');
+        const embedResultSection = document.getElementById('embedResultSection');
+        const urlResultSection = document.getElementById('urlResultSection');
+        const copyEmbedButton = document.getElementById('copyEmbedButton');
+        const copyUrlButton = document.getElementById('copyUrlButton');
+
+        function cleanVideoUrl(url) {
+            const platforms = [
+                { 
+                    name: 'Custom', 
+                    regex: /^(https?:\/\/[^\/]+\/watch\/([^?]+)(\?[^?]+)?)/,
+                    cleanUrlGenerator: (match) => {
+                        return match[1].split('?')[0];
+                    },
+                    adBlockScript: `
+                    (function() {
+                        if (window.open) {
+                            window.open = function() { return null; };
+                        }
+
+                        Object.defineProperty(window, 'location', {
+                            set: function(newLocation) {
+                                console.log('Blocked redirect to: ' + newLocation);
+                            }
+                        });
+
+                        function removeAds() {
+                            const adSelectors = [
+                                '.ad', '.ads', '.advertisement', '.popup', '.popunder',
+                                '[id*="ad"]', '[id*="popup"]', '[class*="ad"]', 
+                                '[class*="popup"]', '[class*="popunder"]'
+                            ];
+                            adSelectors.forEach(selector => {
+                                document.querySelectorAll(selector).forEach(el => el.remove());
+                            });
+
+                            document.querySelectorAll('iframe').forEach(iframe => {
+                                if (iframe.src && (iframe.src.includes('ad') || iframe.src.includes('popup'))) {
+                                    iframe.remove();
+                                }
+                            });
+                        }
+
+                        removeAds();
+
+                        const observer = new MutationObserver(removeAds);
+                        observer.observe(document.body, { childList: true, subtree: true });
+
+                        const createElement = document.createElement;
+                        document.createElement = function(tag) {
+                            const element = createElement.call(document, tag);
+                            if (tag.toLowerCase() === 'iframe') {
+                                element.addEventListener('load', () => {
+                                    try {
+                                        if (element.contentWindow) {
+                                            element.contentWindow.document.querySelectorAll('.ad, .popup').forEach(el => el.remove());
+                                        }
+                                    } catch(e) {
+                                        console.warn('No se puede acceder al contenido del iframe');
+                                    }
+                                });
+                            }
+                            return element;
+                        };
+                    })();
+                    `
+                },
+                { 
+                    name: 'YouTube', 
+                    regex: /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+                    cleanUrlGenerator: (match) => {
+                        return `https://www.youtube-nocookie.com/embed/${match[1]}?autoplay=0&modestbranding=1&rel=0`;
+                    },
+                    adBlockScript: `
+                    (function() {
+                        const hideAds = () => {
+                            const adSelectors = [
+                                '.ytp-ad-overlay', 
+                                '.ytp-ad-skip-button', 
+                                '.ytp-ad-container'
+                            ];
+
+                            adSelectors.forEach(selector => {
+                                const ads = document.querySelectorAll(selector);
+                                ads.forEach(ad => ad.remove());
+                            });
+                        };
+
+                        const skipAd = () => {
+                            const skipButton = document.querySelector('.ytp-ad-skip-button');
+                            if (skipButton) skipButton.click();
+                        };
+
+                        setInterval(hideAds, 1000);
+                        setInterval(skipAd, 1500);
+                    })();
+                    `
+                },
+                { 
+                    name: 'Vimeo', 
+                    regex: /(?:https?:\/\/)?(?:www\.)?(?:player\.)?vimeo\.com\/(?:video\/)?(\d+)/,
+                    cleanUrlGenerator: (match) => {
+                        return `https://player.vimeo.com/video/${match[1]}?title=0&byline=0&portrait=0`;
+                    },
+                    adBlockScript: `
+                    (function() {
+                        const removeVimeoAds = () => {
+                            const adSelectors = [
+                                '.video-affiliate-link', 
+                                '.vimeo-logo'
+                            ];
+
+                            adSelectors.forEach(selector => {
+                                const ads = document.querySelectorAll(selector);
+                                ads.forEach(ad => ad.remove());
+                            });
+                        };
+
+                        setInterval(removeVimeoAds, 1000);
+                    })();
+                    `
+                }
+            ];
+
+            for (let platform of platforms) {
+                const match = url.match(platform.regex);
+                if (match) {
+                    return {
+                        id: match[1],
+                        platform: platform.name,
+                        originalUrl: match[0],
+                        cleanUrl: platform.cleanUrlGenerator(match),
+                        adBlockScript: platform.adBlockScript
+                    };
+                }
             }
 
-            let embedCode = "";
-            let videoUrl = "";
-            const videoIdPattern = /https:\/\/nuuuppp\.biz\/watch\/([a-zA-Z0-9_-]+)/;
-            const match = videoLink.match(videoIdPattern);
+            return null;
+        }
 
-            if (match) {
-                const videoId = match[1];
-                videoUrl = `https://nuuuppp.biz/watch/${videoId}`;
-                embedCode = `
-                    <iframe width="560" height="315" src="https://nuuuppp.biz/embed/${videoId}" frameborder="0" allowfullscreen></iframe>
-                `;
-            } else {
-                alert("Enlace no válido o video no soportado.");
-                return;
-            }
-
-            // Mostrar el enlace y el código embed
-            document.getElementById("resultContainer").innerHTML = `
-                <h3>Enlace del Video:</h3>
-                <a href="${videoUrl}" target="_blank">${videoUrl}</a>
-                <h3>Código Embed:</h3>
-                <div class="embed-code">${embedCode}</div>
+        function createCleanUrlWithAdBlock(videoInfo) {
+            return `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Sin Publicidad</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <iframe src="${videoInfo.cleanUrl}" allowfullscreen></iframe>
+    <script>
+        ${videoInfo.adBlockScript}
+    <\/script>
+</body>
+</html>
             `;
         }
+
+        function createAdBlockingIframe(embedUrl, adBlockScript) {
+            return `
+<iframe id="videoFrame" 
+        src="${embedUrl}" 
+        allowfullscreen 
+        style="width:100%; height:500px; border:none;">
+</iframe>
+<script>
+document.getElementById('videoFrame').onload = function() {
+    try {
+        const iframeDocument = this.contentDocument || this.contentWindow.document;
+        const adSelectors = [
+            '.ad-class', '#ad-id', '[id*="ad"]', '[class*="ad"]', 
+            '.advertisement', '.ads', '.advert', 
+            '[id*="advertisement"]', '[class*="advertisement"]'
+        ];
+        adSelectors.forEach(selector => {
+            const ads = iframeDocument.querySelectorAll(selector);
+            ads.forEach(ad => ad.remove());
+        });
+        const closeButtons = iframeDocument.querySelectorAll('.close-ad-button, .skip-ad-button, [aria-label="Close ad"]');
+        closeButtons.forEach(button => button.click());
+    } catch (e) {
+        console.warn('No se puede acceder al contenido del iframe debido a restricciones de origen.');
+    }
+};
+<\/script>
+            `;
+        }
+
+        function processVideo(mode) {
+            errorMessage.textContent = '';
+            embedResultSection.style.display = 'none';
+            urlResultSection.style.display = 'none';
+
+            const videoUrl = videoUrlInput.value.trim();
+            const videoInfo = cleanVideoUrl(videoUrl);
+
+            if (videoInfo) {
+                try {
+                    if (mode === 'embed') {
+                        const embedCode = createAdBlockingIframe(videoInfo.cleanUrl, videoInfo.adBlockScript);
+                        processedVideo.innerHTML = embedCode;
+                        embedCodeArea.value = embedCode;
+                        embedResultSection.style.display = 'block';
+                    } else if (mode === 'url') {
+                        const cleanHtml = createCleanUrlWithAdBlock(videoInfo);
+                        const blob = new Blob([cleanHtml], {type: 'text/html'});
+                        const cleanUrl = URL.createObjectURL(blob);
+
+                        cleanUrlArea.value = cleanUrl;
+                        urlResultSection.style.display = 'block';
+                    }
+                } catch (error) {
+                    errorMessage.textContent = 'Error al procesar el video: ' + error.message;
+                }
+            } else {
+                errorMessage.textContent = 'URL de video inválida';
+            }
+        }
+
+        processEmbedButton.addEventListener('click', () => processVideo('embed'));
+        processUrlButton.addEventListener('click', () => processVideo('url'));
+
+        copyEmbedButton.addEventListener('click', () => {
+            embedCodeArea.select();
+            document.execCommand('copy');
+            alert('Código Embed copiado al portapapeles');
+        });
+
+        copyUrlButton.addEventListener('click', () => {
+            cleanUrlArea.select();
+            document.execCommand('copy');
+            alert('URL Limpia copiada al portapapeles');
+        });
     </script>
 </body>
 </html>
