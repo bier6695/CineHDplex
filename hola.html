@@ -102,65 +102,6 @@
         function cleanVideoUrl(url) {
             const platforms = [
                 { 
-                    name: 'Custom', 
-                    regex: /^(https?:\/\/[^\/]+\/watch\/([^?]+)(\?[^?]+)?)/,
-                    cleanUrlGenerator: (match) => {
-                        return match[1].split('?')[0];
-                    },
-                    adBlockScript: `
-                    (function() {
-                        if (window.open) {
-                            window.open = function() { return null; };
-                        }
-
-                        Object.defineProperty(window, 'location', {
-                            set: function(newLocation) {
-                                console.log('Blocked redirect to: ' + newLocation);
-                            }
-                        });
-
-                        function removeAds() {
-                            const adSelectors = [
-                                '.ad', '.ads', '.advertisement', '.popup', '.popunder',
-                                '[id*="ad"]', '[id*="popup"]', '[class*="ad"]', 
-                                '[class*="popup"]', '[class*="popunder"]'
-                            ];
-                            adSelectors.forEach(selector => {
-                                document.querySelectorAll(selector).forEach(el => el.remove());
-                            });
-
-                            document.querySelectorAll('iframe').forEach(iframe => {
-                                if (iframe.src && (iframe.src.includes('ad') || iframe.src.includes('popup'))) {
-                                    iframe.remove();
-                                }
-                            });
-                        }
-
-                        removeAds();
-
-                        const observer = new MutationObserver(removeAds);
-                        observer.observe(document.body, { childList: true, subtree: true });
-
-                        const createElement = document.createElement;
-                        document.createElement = function(tag) {
-                            const element = createElement.call(document, tag);
-                            if (tag.toLowerCase() === 'iframe') {
-                                element.addEventListener('load', () => {
-                                    try {
-                                        if (element.contentWindow) {
-                                            element.contentWindow.document.querySelectorAll('.ad, .popup').forEach(el => el.remove());
-                                        }
-                                    } catch(e) {
-                                        console.warn('No se puede acceder al contenido del iframe');
-                                    }
-                                });
-                            }
-                            return element;
-                        };
-                    })();
-                    `
-                },
-                { 
                     name: 'YouTube', 
                     regex: /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
                     cleanUrlGenerator: (match) => {
@@ -174,44 +115,22 @@
                                 '.ytp-ad-skip-button', 
                                 '.ytp-ad-container'
                             ];
-
+                            
                             adSelectors.forEach(selector => {
                                 const ads = document.querySelectorAll(selector);
                                 ads.forEach(ad => ad.remove());
                             });
                         };
 
+                        // Intentar omitir anuncios
                         const skipAd = () => {
                             const skipButton = document.querySelector('.ytp-ad-skip-button');
                             if (skipButton) skipButton.click();
                         };
 
+                        // Ejecutar bloqueo de anuncios
                         setInterval(hideAds, 1000);
                         setInterval(skipAd, 1500);
-                    })();
-                    `
-                },
-                { 
-                    name: 'Vimeo', 
-                    regex: /(?:https?:\/\/)?(?:www\.)?(?:player\.)?vimeo\.com\/(?:video\/)?(\d+)/,
-                    cleanUrlGenerator: (match) => {
-                        return `https://player.vimeo.com/video/${match[1]}?title=0&byline=0&portrait=0`;
-                    },
-                    adBlockScript: `
-                    (function() {
-                        const removeVimeoAds = () => {
-                            const adSelectors = [
-                                '.video-affiliate-link', 
-                                '.vimeo-logo'
-                            ];
-
-                            adSelectors.forEach(selector => {
-                                const ads = document.querySelectorAll(selector);
-                                ads.forEach(ad => ad.remove());
-                            });
-                        };
-
-                        setInterval(removeVimeoAds, 1000);
                     })();
                     `
                 }
@@ -257,7 +176,7 @@
     <iframe src="${videoInfo.cleanUrl}" allowfullscreen></iframe>
     <script>
         ${videoInfo.adBlockScript}
-    <\/script>
+    </script>
 </body>
 </html>
             `;
@@ -289,12 +208,15 @@ document.getElementById('videoFrame').onload = function() {
         console.warn('No se puede acceder al contenido del iframe debido a restricciones de origen.');
     }
 };
-<\/script>
+</script>
             `;
         }
 
         function processVideo(mode) {
+            // Limpiar mensajes de error previos
             errorMessage.textContent = '';
+            
+            // Ocultar secciones previas
             embedResultSection.style.display = 'none';
             urlResultSection.style.display = 'none';
 
@@ -305,6 +227,7 @@ document.getElementById('videoFrame').onload = function() {
                 try {
                     if (mode === 'embed') {
                         const embedCode = createAdBlockingIframe(videoInfo.cleanUrl, videoInfo.adBlockScript);
+                        
                         processedVideo.innerHTML = embedCode;
                         embedCodeArea.value = embedCode;
                         embedResultSection.style.display = 'block';
@@ -312,7 +235,7 @@ document.getElementById('videoFrame').onload = function() {
                         const cleanHtml = createCleanUrlWithAdBlock(videoInfo);
                         const blob = new Blob([cleanHtml], {type: 'text/html'});
                         const cleanUrl = URL.createObjectURL(blob);
-
+                        
                         cleanUrlArea.value = cleanUrl;
                         urlResultSection.style.display = 'block';
                     }
@@ -324,9 +247,13 @@ document.getElementById('videoFrame').onload = function() {
             }
         }
 
+        // Botón de Embed
         processEmbedButton.addEventListener('click', () => processVideo('embed'));
+
+        // Botón de URL Limpia
         processUrlButton.addEventListener('click', () => processVideo('url'));
 
+        // Botones de Copiar
         copyEmbedButton.addEventListener('click', () => {
             embedCodeArea.select();
             document.execCommand('copy');
