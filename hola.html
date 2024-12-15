@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Videos</title>
+    <title>Reproductor sin Publicidad</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -57,12 +57,12 @@
 </head>
 <body>
     <header>
-        <h1>Gestión de Videos sin Publicidad</h1>
+        <h1>Generar Reproductor sin Publicidad</h1>
     </header>
     <div class="container">
         <label for="videoLink">Ingresa el enlace del video:</label>
-        <input type="text" id="videoLink" placeholder="Ejemplo: https://www.youtube.com/watch?v=dQw4w9WgXcQ">
-        <button onclick="generateEmbedCode()">Generar Video</button>
+        <input type="text" id="videoLink" placeholder="Ejemplo: https://nuuuppp.biz/watch/dB3jz3bC7kz74fg7U9M0vH0mzBJcYeCt5IjthVLMi2BJoakPg">
+        <button onclick="generateEmbedCode()">Generar Video sin Publicidad</button>
         
         <div class="result" id="resultContainer">
             <!-- Aquí aparecerán los resultados -->
@@ -79,18 +79,21 @@
 
             let embedCode = "";
             let videoUrl = "";
-            const videoIdPattern = /(?:https?:\/\/(?:www\.)?youtube\.com\/(?:[^\/]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S+?v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+            const videoIdPattern = /https:\/\/nuuuppp\.biz\/watch\/([a-zA-Z0-9_-]+)/;
             const match = videoLink.match(videoIdPattern);
 
             if (match) {
                 const videoId = match[1];
-                videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-                embedCode = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+                videoUrl = `https://nuuuppp.biz/watch/${videoId}`;
+                embedCode = `
+                    <iframe width="560" height="315" src="https://nuuuppp.biz/embed/${videoId}" frameborder="0" allowfullscreen></iframe>
+                `;
             } else {
                 alert("Enlace no válido o video no soportado.");
                 return;
             }
 
+            // Mostrar el enlace y el código embed
             document.getElementById("resultContainer").innerHTML = `
                 <h3>Enlace del Video:</h3>
                 <a href="${videoUrl}" target="_blank">${videoUrl}</a>
