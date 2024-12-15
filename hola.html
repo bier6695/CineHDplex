@@ -3,223 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Embedder Universal de Videos Sin Publicidad</title>
+    <title>Gestión de Videos</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
             background-color: #f0f0f0;
         }
-        #videoContainer {
+        header {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
             background-color: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        #videoUrlInput {
+        input[type="text"] {
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
-            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
         }
-        .button {
+        button {
             background-color: #4CAF50;
             color: white;
+            padding: 10px 15px;
             border: none;
-            padding: 10px 20px;
+            border-radius: 4px;
             cursor: pointer;
-            margin-right: 10px;
-            margin-bottom: 10px;
         }
-        .button.secondary {
-            background-color: #2196F3;
+        button:hover {
+            background-color: #45a049;
         }
-        #resultContainer {
+        .result {
             margin-top: 20px;
         }
-        .result-section {
-            margin-bottom: 20px;
+        .embed-code {
             background-color: #f9f9f9;
-            padding: 15px;
-            border-radius: 5px;
-        }
-        textarea {
-            width: 100%;
-            height: 100px;
-            margin-top: 10px;
-            box-sizing: border-box;
-        }
-        #previewFrame {
-            width: 100%;
-            height: 500px;
-            border: 1px solid #ddd;
-            margin-top: 10px;
-        }
-        #errorMessage {
-            color: red;
-            margin-top: 10px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
         }
     </style>
 </head>
 <body>
-    <div id="videoContainer">
-        <h1>Embedder Universal de Videos Sin Publicidad</h1>
-        <input type="text" id="videoUrlInput" placeholder="Pega aquí el enlace del video">
-        <div>
-            <button id="generateButton" class="button">Generar URL Sin Publicidad</button>
-            <button id="previewButton" class="button secondary">Vista Previa</button>
-        </div>
+    <header>
+        <h1>Gestión de Videos sin Publicidad</h1>
+    </header>
+    <div class="container">
+        <label for="videoLink">Ingresa el enlace del video:</label>
+        <input type="text" id="videoLink" placeholder="Ejemplo: https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+        <button onclick="generateEmbedCode()">Generar Video</button>
         
-        <div id="errorMessage"></div>
-
-        <div id="resultContainer" style="display:none;">
-            <div class="result-section">
-                <h2>URL Sin Publicidad:</h2>
-                <textarea id="cleanUrlArea" readonly></textarea>
-                <button onclick="copyToClipboard('cleanUrlArea')">Copiar URL</button>
-            </div>
-
-            <div class="result-section">
-                <h2>Código Embed Sin Publicidad:</h2>
-                <textarea id="embedCodeArea" readonly></textarea>
-                <button onclick="copyToClipboard('embedCodeArea')">Copiar Embed</button>
-            </div>
-
-            <div class="result-section">
-                <h2>Vista Previa:</h2>
-                <iframe id="previewFrame" allowfullscreen></iframe>
-            </div>
+        <div class="result" id="resultContainer">
+            <!-- Aquí aparecerán los resultados -->
         </div>
     </div>
 
     <script>
-        function createAdFreeEmbedder(originalUrl) {
-            return `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Video Sin Publicidad</title>
-    <style>
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            overflow: hidden; 
-        }
-        iframe { 
-            width: 100%; 
-            height: 100%; 
-            border: none; 
-        }
-    </style>
-</head>
-<body>
-    <iframe src="${originalUrl}" allowfullscreen></iframe>
-    <script>
-        // Script de bloqueo de anuncios
-        (function() {
-            function removeAds() {
-                const adSelectors = [
-                    '.ad', '.ads', '.advertisement', '.popup', 
-                    '[id*="ad"]', '[class*="ad"]', 
-                    '[class*="popup"]', '[class*="advertisement"]'
-                ];
-                
-                adSelectors.forEach(selector => {
-                    document.querySelectorAll(selector).forEach(el => {
-                        el.remove();
-                        el.style.display = 'none';
-                    });
-                });
-
-                // Eliminar iframes sospechosos
-                document.querySelectorAll('iframe').forEach(iframe => {
-                    if (iframe.src && (
-                        iframe.src.includes('ad') || 
-                        iframe.src.includes('popup') || 
-                        iframe.src.includes('banner')
-                    )) {
-                        iframe.remove();
-                    }
-                });
-            }
-
-            // Ejecutar bloqueo de anuncios
-            removeAds();
-            
-            // Observador para eliminar anuncios dinámicos
-            const observer = new MutationObserver(removeAds);
-            observer.observe(document.body, {
-                childList: true, 
-                subtree: true
-            });
-        })();
-    <\/script>
-</body>
-</html>
-            `;
-        }
-
-        function processVideoUrl() {
-            const videoUrlInput = document.getElementById('videoUrlInput');
-            const errorMessage = document.getElementById('errorMessage');
-            const resultContainer = document.getElementById('resultContainer');
-            const cleanUrlArea = document.getElementById('cleanUrlArea');
-            const embedCodeArea = document.getElementById('embedCodeArea');
-            const previewFrame = document.getElementById('previewFrame');
-
-            // Limpiar mensajes previos
-            errorMessage.textContent = '';
-            resultContainer.style.display = 'none';
-
-            const originalUrl = videoUrlInput.value.trim();
-
-            if (!originalUrl) {
-                errorMessage.textContent = 'Por favor ingresa una URL de video';
+        function generateEmbedCode() {
+            const videoLink = document.getElementById("videoLink").value;
+            if (videoLink === "") {
+                alert("Por favor ingresa un enlace de video.");
                 return;
             }
 
-            try {
-                // Generar HTML sin publicidad
-                const adFreeHtml = createAdFreeEmbedder(originalUrl);
-                const blob = new Blob([adFreeHtml], {type: 'text/html'});
-                const cleanUrl = URL.createObjectURL(blob);
+            let embedCode = "";
+            let videoUrl = "";
+            const videoIdPattern = /(?:https?:\/\/(?:www\.)?youtube\.com\/(?:[^\/]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S+?v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+            const match = videoLink.match(videoIdPattern);
 
-                // Generar código embed
-                const embedCode = `
-<iframe 
-    src="${cleanUrl}" 
-    width="100%" 
-    height="500" 
-    allowfullscreen 
-    style="border:none;">
-</iframe>`;
-
-                // Mostrar resultados
-                cleanUrlArea.value = cleanUrl;
-                embedCodeArea.value = embedCode;
-                previewFrame.src = cleanUrl;
-                resultContainer.style.display = 'block';
-
-            } catch (error) {
-                errorMessage.textContent = 'Error al procesar el video: ' + error.message;
+            if (match) {
+                const videoId = match[1];
+                videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+                embedCode = `<iframe width="560" height="315" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            } else {
+                alert("Enlace no válido o video no soportado.");
+                return;
             }
+
+            document.getElementById("resultContainer").innerHTML = `
+                <h3>Enlace del Video:</h3>
+                <a href="${videoUrl}" target="_blank">${videoUrl}</a>
+                <h3>Código Embed:</h3>
+                <div class="embed-code">${embedCode}</div>
+            `;
         }
-
-        function copyToClipboard(elementId) {
-            const copyText = document.getElementById(elementId);
-            copyText.select();
-            document.execCommand('copy');
-            alert('Copiado al portapapeles');
-        }
-
-        // Evento para generar URL
-        document.getElementById('generateButton').addEventListener('click', processVideoUrl);
-
-        // Evento para vista previa
-        document.getElementById('previewButton').addEventListener('click', processVideoUrl);
     </script>
 </body>
 </html>
