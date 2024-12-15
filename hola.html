@@ -100,89 +100,18 @@
         const copyUrlButton = document.getElementById('copyUrlButton');
 
         function cleanVideoUrl(url) {
-            const platforms = [
-                { 
-                    name: 'YouTube', 
-                    regex: /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-                    cleanUrlGenerator: (match) => {
-                        return `https://www.youtube-nocookie.com/embed/${match[1]}?autoplay=0&modestbranding=1&rel=0`;
-                    },
-                    adBlockScript: `
-                    (function() {
-                        const hideAds = () => {
-                            const adSelectors = [
-                                '.ytp-ad-overlay', 
-                                '.ytp-ad-skip-button', 
-                                '.ytp-ad-container'
-                            ];
-                            
-                            adSelectors.forEach(selector => {
-                                const ads = document.querySelectorAll(selector);
-                                ads.forEach(ad => ad.remove());
-                            });
-                        };
-
-                        // Intentar omitir anuncios
-                        const skipAd = () => {
-                            const skipButton = document.querySelector('.ytp-ad-skip-button');
-                            if (skipButton) skipButton.click();
-                        };
-
-                        // Ejecutar bloqueo de anuncios
-                        setInterval(hideAds, 1000);
-                        setInterval(skipAd, 1500);
-                    })();
-                    `
-                }
-            ];
-
-            for (let platform of platforms) {
-                const match = url.match(platform.regex);
-                if (match) {
-                    return {
-                        id: match[1],
-                        platform: platform.name,
-                        originalUrl: match[0],
-                        cleanUrl: platform.cleanUrlGenerator(match),
-                        adBlockScript: platform.adBlockScript
-                    };
-                }
+            const videoPattern = /https:\/\/nuuuppp\.biz\/watch\/([a-zA-Z0-9]+)/;
+            const match = url.match(videoPattern);
+            if (match) {
+                return {
+                    id: match[1],
+                    cleanUrl: `https://nuuuppp.biz/watch/${match[1]}`
+                };
             }
-
             return null;
         }
 
-        function createCleanUrlWithAdBlock(videoInfo) {
-            return `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Video Sin Publicidad</title>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
-        }
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-    </style>
-</head>
-<body>
-    <iframe src="${videoInfo.cleanUrl}" allowfullscreen></iframe>
-    <script>
-        ${videoInfo.adBlockScript}
-    </script>
-</body>
-</html>
-            `;
-        }
-
-        function createAdBlockingIframe(embedUrl, adBlockScript) {
+        function createAdBlockingIframe(embedUrl) {
             return `
 <iframe id="videoFrame" 
         src="${embedUrl}" 
@@ -212,6 +141,45 @@ document.getElementById('videoFrame').onload = function() {
             `;
         }
 
+        function createCleanUrlWithAdBlock(videoUrl) {
+            return `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Sin Publicidad</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <iframe src="${videoUrl}" allowfullscreen></iframe>
+    <script>
+        // Lógica para bloquear los anuncios si es posible en este sitio
+        const iframe = document.querySelector('iframe');
+        iframe.onload = function() {
+            try {
+                const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+                // Aquí puedes añadir más lógica de bloqueo de anuncios si puedes acceder a los elementos
+            } catch (e) {
+                console.warn('No se puede acceder al contenido del iframe debido a restricciones de origen.');
+            }
+        };
+    </script>
+</body>
+</html>
+            `;
+        }
+
         function processVideo(mode) {
             // Limpiar mensajes de error previos
             errorMessage.textContent = '';
@@ -226,13 +194,13 @@ document.getElementById('videoFrame').onload = function() {
             if (videoInfo) {
                 try {
                     if (mode === 'embed') {
-                        const embedCode = createAdBlockingIframe(videoInfo.cleanUrl, videoInfo.adBlockScript);
+                        const embedCode = createAdBlockingIframe(videoInfo.cleanUrl);
                         
                         processedVideo.innerHTML = embedCode;
                         embedCodeArea.value = embedCode;
                         embedResultSection.style.display = 'block';
                     } else if (mode === 'url') {
-                        const cleanHtml = createCleanUrlWithAdBlock(videoInfo);
+                        const cleanHtml = createCleanUrlWithAdBlock(videoInfo.cleanUrl);
                         const blob = new Blob([cleanHtml], {type: 'text/html'});
                         const cleanUrl = URL.createObjectURL(blob);
                         
