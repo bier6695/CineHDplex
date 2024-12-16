@@ -3,240 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Player Pro</title>
+    <title>Video Sin Interrupciones</title>
     <style>
-        body, html {
+        body {
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            height: 100%;
+            background-color: #f9f9f9;
             overflow: hidden;
-            background: black;
         }
         #videoContainer {
             position: relative;
             width: 100%;
             height: 100vh;
+            background-color: #000;
         }
-        #videoPlayer {
+        iframe {
             width: 100%;
             height: 100%;
+            border: none;
         }
-        #loadingOverlay {
+        .adBlock {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
             display: flex;
             justify-content: center;
             align-items: center;
-            color: white;
-            z-index: 1000;
+            z-index: 999;
+            visibility: hidden;
+            font-size: 1.2rem;
+            text-align: center;
+            padding: 20px;
         }
     </style>
 </head>
 <body>
     <div id="videoContainer">
-        <div id="videoPlayer"></div>
-        <div id="loadingOverlay">
-            <h2>Preparando reproducción...</h2>
+        <iframe id="videoIframe" src="" allowfullscreen></iframe>
+        <div class="adBlock" id="adBlock">
+            <p>Cargando video... Por favor, espera unos segundos mientras preparamos la reproducción.</p>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-base64/3.7.2/base64.min.js"></script>
     <script>
-    // Configuración principal
-    const CONFIG = {
-        userAgents: [
-            'Mozilla/5.0 (Linux; Android 4.1.1; Galaxy Nexus Build/JRO03C) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.166 Mobile Safari/535.19',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        ],
-        proxies: [
-            'https://cors-anywhere.herokuapp.com/',
-            'https://api.allorigins.win/raw?url='
-        ]
-    };
-
-    // Utilidades de seguridad
-    const SecurityUtils = {
-        // Generar headers dinámicos
-        generateHeaders(url) {
-            const urlObj = new URL(url);
-            return {
-                'Origin': urlObj.origin,
-                'X-Requested-With': 'XMLHttpRequest',
-                'Referer': urlObj.origin + '/',
-                'User-Agent': CONFIG.userAgents[Math.floor(Math.random() * CONFIG.userAgents.length)]
-            };
-        },
-
-        // Ofuscación de URL
-        obfuscateUrl(url) {
-            return Base64.encodeURI(url);
-        },
-
-        // Desofuscación de URL
-        deobfuscateUrl(encodedUrl) {
-            return Base64.decode(encodedUrl);
+        // Función para obtener parámetros de la URL
+        function getParameterByName(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
         }
-    };
 
-    // Extracción de información de video
-    function extractVideoInfo(url) {
-        const videoPatterns = [
-            { 
-                regex: /https:\/\/(streamwish\.to|nuuuppp\.biz|powvideo\.org|hlsflast\.com|voe\.sx|vidhidepro\.com|filemoon\.sx)\/(e\/|watch\/|embed-)?([a-zA-Z0-9\-]+)/,
-                transform: (match) => `https://${match[1]}/e/${match[3]}`
-            }
-        ];
+        // Función para extraer información del video según la URL proporcionada
+        function extractVideoInfo(url) {
+            const urlPatterns = [
+                { regex: /https:\/\/streamwish\.to\/e\/([a-zA-Z0-9]+)/, embed: (id) => `https://streamwish.to/e/${id}` },
+                { regex: /https:\/\/nuuuppp\.biz\/watch\/([a-zA-Z0-9]+)/, embed: (id) => `https://nuuuppp.biz/watch/${id}` },
+                { regex: /https:\/\/powvideo\.org\/embed-([a-zA-Z0-9\-]+)\.html/, embed: (id) => `https://powvideo.org/embed-${id}-954x562.html` },
+                { regex: /https:\/\/hlsflast\.com\/e\/([a-zA-Z0-9\-]+)/, embed: (id) => `https://hlsflast.com/e/${id}` },
+                { regex: /https:\/\/voe\.sx\/e\/([a-zA-Z0-9\-]+)/, embed: (id) => `https://voe.sx/e/${id}` },
+                { regex: /https:\/\/vidhidepro\.com\/v\/([a-zA-Z0-9\-]+)/, embed: (id) => `https://vidhidepro.com/v/${id}` },
+                { regex: /https:\/\/filemoon\.sx\/e\/([a-zA-Z0-9\-]+)/, embed: (id) => `https://filemoon.sx/e/${id}` }
+            ];
 
-        for (const pattern of videoPatterns) {
-            const match = url.match(pattern.regex);
-            if (match) {
-                return { 
-                    embedUrl: pattern.transform(match),
-                    originalUrl: url 
-                };
+            for (const pattern of urlPatterns) {
+                const match = url.match(pattern.regex);
+                if (match) {
+                    return { embedUrl: pattern.embed(match[1]) };
+                }
             }
+            return null; // Si no coincide con ningún patrón
         }
-        return null;
-    }
 
-    // Métodos de reproducción avanzados
-    const VideoLoader = {
-        // Método principal de carga
-        async loadVideo(videoUrl) {
-            const videoInfo = extractVideoInfo(videoUrl);
-            if (!videoInfo) {
-                alert('URL de video no válida');
+        // Función para cargar el video en el iframe
+        function loadVideo() {
+            const videoUrl = getParameterByName('videoUrl');
+            const iframe = document.getElementById('videoIframe');
+            const adBlock = document.getElementById('adBlock');
+
+            if (!videoUrl) {
+                alert('No se proporcionó una URL de video.');
                 return;
             }
 
-            // Intentar múltiples métodos de carga
-            const loadMethods = [
-                this.loadWithDirectEmbed,
-                this.loadWithProxy,
-                this.loadWithCustomPlayer
-            ];
+            const videoInfo = extractVideoInfo(videoUrl);
+            if (videoInfo) {
+                iframe.src = videoInfo.embedUrl;
+                adBlock.style.visibility = 'visible';
 
-            for (const method of loadMethods) {
-                try {
-                    await method.call(this, videoInfo);
-                    return;
-                } catch (error) {
-                    console.warn('Método de carga falló:', error);
-                }
+                // Simular un bloqueo de publicidad durante unos segundos
+                setTimeout(() => {
+                    adBlock.style.visibility = 'hidden';
+                }, 5000); // Bloqueo de anuncios de 5 segundos
+            } else {
+                alert('La URL del video no es válida o no está soportada.');
             }
-
-            alert('No se pudo cargar el video');
-        },
-
-        // Carga directa con embed
-        async loadWithDirectEmbed(videoInfo) {
-            const videoPlayer = document.getElementById('videoPlayer');
-            const loadingOverlay = document.getElementById('loadingOverlay');
-
-            // Crear elemento de video personalizado
-            videoPlayer.innerHTML = ` 
-                <iframe 
-                    src="${videoInfo.embedUrl}" 
-                    width="100%" 
-                    height="100%" 
-                    frameborder="0" 
-                    allowfullscreen
-                    allow="autoplay; encrypted-media"
-                    referrerpolicy="no-referrer"
-                ></iframe>
-            `;
-
-            // Ocultar overlay
-            loadingOverlay.style.display = 'none';
-        },
-
-        // Carga con proxy
-        async loadWithProxy(videoInfo) {
-            const videoPlayer = document.getElementById('videoPlayer');
-            const loadingOverlay = document.getElementById('loadingOverlay');
-
-            // Usar proxy aleatorio
-            const proxyUrl = CONFIG.proxies[Math.floor(Math.random() * CONFIG.proxies.length)];
-            const proxiedUrl = proxyUrl + encodeURIComponent(videoInfo.embedUrl);
-
-            videoPlayer.innerHTML = `
-                <iframe 
-                    src="${proxiedUrl}" 
-                    width="100%" 
-                    height="100%" 
-                    frameborder="0" 
-                    allowfullscreen
-                    allow="autoplay; encrypted-media"
-                    referrerpolicy="no-referrer"
-                ></iframe>
-            `;
-
-            loadingOverlay.style.display = 'none';
-        },
-
-        // Carga con reproductor personalizado
-        async loadWithCustomPlayer(videoInfo) {
-            const videoPlayer = document.getElementById('videoPlayer');
-            const loadingOverlay = document.getElementById('loadingOverlay');
-
-            // Implementar un reproductor HTML5 personalizado
-            videoPlayer.innerHTML = ` 
-                <video 
-                    id="customVideoPlayer" 
-                    width="100%" 
-                    height="100%" 
-                    controls 
-                    autoplay
-                >
-                    <source src="${videoInfo.embedUrl}" type="video/mp4">
-                    Tu navegador no soporta el elemento de video.
-                </video>
-            `;
-
-            loadingOverlay.style.display = 'none';
         }
-    };
 
-    // Configuración de eventos
-    function initializeVideoLoader() {
-        // Obtener URL del video
-        const videoUrl = new URLSearchParams(window.location.search).get('videoUrl');
-
-        if (videoUrl) {
-            // Cargar video
-            VideoLoader.loadVideo(videoUrl);
-        } else {
-            alert('No se proporcionó URL de video');
-        }
-    }
-
-    // Función para prevenir la apertura de nuevas ventanas
-    function preventNewWindows() {
-        // Sobrescribir window.open para que no abra nuevas ventanas
-        window.open = function() {
-            return null;
-        };
-
-        // Prevenir clics en enlaces o iframes que intenten abrir nuevas ventanas
-        document.addEventListener('click', function(event) {
-            if (event.target.tagName === 'A' || event.target.tagName === 'IFRAME') {
-                event.preventDefault();
-                event.stopPropagation();
-                return false;
-            }
-        }, true);
-    }
-
-    // Inicialización
-    window.addEventListener('load', () => {
-        preventNewWindows();
-        initializeVideoLoader();
-    });
+        // Ejecutar la función al cargar la página
+        window.onload = loadVideo;
     </script>
 </body>
 </html>
