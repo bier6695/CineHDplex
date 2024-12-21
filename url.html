@@ -1,0 +1,137 @@
+import React, { useState } from 'react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
+const VideoCollector = () => {
+  const [videos, setVideos] = useState({
+    latino: [],
+    espanol: [],
+    subtitulado: []
+  });
+  
+  const [currentVideo, setCurrentVideo] = useState(null);
+  const [newLink, setNewLink] = useState('');
+  const [newTitle, setNewTitle] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('');
+
+  const addVideo = (language) => {
+    if (newLink && newTitle) {
+      setVideos(prev => ({
+        ...prev,
+        [language]: [...prev[language], {
+          title: newTitle,
+          url: newLink
+        }]
+      }));
+      setNewLink('');
+      setNewTitle('');
+      setSelectedLanguage('');
+    }
+  };
+
+  const generateCollectorLink = () => {
+    // Aquí se generaría el enlace con todos los videos
+    const data = encodeURIComponent(JSON.stringify(videos));
+    return `https://tudominio.com/collector?data=${data}`;
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto p-4 space-y-6">
+      {/* Panel de Agregar Enlaces */}
+      <Card className="p-4">
+        <h2 className="text-2xl font-bold mb-4">Agregar Nuevo Enlace</h2>
+        <div className="space-y-4">
+          <div>
+            <Input
+              placeholder="Título del video"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              className="mb-2"
+            />
+            <Input
+              placeholder="URL del video"
+              value={newLink}
+              onChange={(e) => setNewLink(e.target.value)}
+              className="mb-2"
+            />
+            <select 
+              className="w-full p-2 border rounded-md mb-2"
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+            >
+              <option value="">Seleccionar idioma</option>
+              <option value="latino">Latino</option>
+              <option value="espanol">Español</option>
+              <option value="subtitulado">Subtitulado</option>
+            </select>
+            <Button 
+              onClick={() => addVideo(selectedLanguage)}
+              disabled={!newLink || !newTitle || !selectedLanguage}
+              className="w-full"
+            >
+              + Agregar Video
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Visor de Videos */}
+      <Card className="p-4">
+        <Tabs defaultValue="latino" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="latino">Latino</TabsTrigger>
+            <TabsTrigger value="espanol">Español</TabsTrigger>
+            <TabsTrigger value="subtitulado">Subtitulado</TabsTrigger>
+          </TabsList>
+
+          {Object.entries(videos).map(([language, videoList]) => (
+            <TabsContent key={language} value={language}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  {videoList.map((video, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => setCurrentVideo(video)}
+                    >
+                      {video.title}
+                    </Button>
+                  ))}
+                </div>
+                {currentVideo && (
+                  <div className="aspect-video">
+                    <iframe
+                      src={currentVideo.url}
+                      className="w-full h-full"
+                      allowFullScreen
+                      title={currentVideo.title}
+                    />
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+      </Card>
+
+      {/* Generador de Enlace */}
+      <Card className="p-4">
+        <Button
+          onClick={() => {
+            const link = generateCollectorLink();
+            navigator.clipboard.writeText(link);
+            alert('Enlace copiado al portapapeles!');
+          }}
+          className="w-full"
+        >
+          Generar Enlace del Recolector
+        </Button>
+      </Card>
+    </div>
+  );
+};
+
+export default VideoCollector;
