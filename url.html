@@ -3,104 +3,188 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Video Collector</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.16.0/babel.min.js"></script> <!-- Para usar JSX directamente en el navegador -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+  <title>Recolector de Videos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .input-field {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .select-field {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .button {
+      width: 100%;
+      padding: 10px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .button:disabled {
+      background-color: #ddd;
+    }
+    .video-list {
+      margin-top: 20px;
+    }
+    .video-item {
+      padding: 10px;
+      background-color: #f9f9f9;
+      border: 1px solid #ccc;
+      margin-bottom: 5px;
+      cursor: pointer;
+    }
+    .video-item:hover {
+      background-color: #e0e0e0;
+    }
+    .tabs {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+    .tab-button {
+      padding: 10px;
+      background-color: #f1f1f1;
+      border: none;
+      cursor: pointer;
+      flex: 1;
+    }
+    .tab-button.active {
+      background-color: #4CAF50;
+      color: white;
+    }
+  </style>
 </head>
 <body>
-  <div id="root"></div>
 
-  <script type="text/babel">
-    const { useState } = React;
+<div class="container">
+  <h2>Agregar Nuevo Video</h2>
+  <input id="video-title" type="text" class="input-field" placeholder="Título del video" />
+  <input id="video-url" type="text" class="input-field" placeholder="URL del video" />
+  <select id="video-language" class="select-field">
+    <option value="">Seleccionar idioma</option>
+    <option value="latino">Latino</option>
+    <option value="espanol">Español</option>
+    <option value="subtitulado">Subtitulado</option>
+  </select>
+  <button class="button" id="add-video-button" disabled>+ Agregar Video</button>
 
-    const VideoCollector = () => {
-      const [videos, setVideos] = useState({
-        latino: [],
-        espanol: [],
-        subtitulado: []
-      });
-      
-      const [currentVideo, setCurrentVideo] = useState(null);
-      const [newLink, setNewLink] = useState('');
-      const [newTitle, setNewTitle] = useState('');
-      const [selectedLanguage, setSelectedLanguage] = useState('');
+  <div class="tabs">
+    <button class="tab-button active" id="latino-tab">Latino</button>
+    <button class="tab-button" id="espanol-tab">Español</button>
+    <button class="tab-button" id="subtitulado-tab">Subtitulado</button>
+  </div>
 
-      const addVideo = (language) => {
-        if (newLink && newTitle) {
-          setVideos(prev => ({
-            ...prev,
-            [language]: [...prev[language], { title: newTitle, url: newLink }]
-          }));
-          setNewLink('');
-          setNewTitle('');
-          setSelectedLanguage('');
-        }
-      };
+  <div class="video-list" id="video-list"></div>
 
-      const generateCollectorLink = () => {
-        const data = encodeURIComponent(JSON.stringify(videos));
-        return `https://tudominio.com/collector?data=${data}`;
-      };
+  <button class="button" id="generate-link-button">Generar Enlace del Recolector</button>
+</div>
 
-      return (
-        <div className="max-w-6xl mx-auto p-4 space-y-6">
-          <div className="p-4">
-            <h2 className="text-2xl font-bold mb-4">Agregar Nuevo Enlace</h2>
-            <div className="space-y-4">
-              <input 
-                type="text" 
-                placeholder="Título del video" 
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)} 
-                className="mb-2 p-2 border rounded"
-              />
-              <input 
-                type="text" 
-                placeholder="URL del video" 
-                value={newLink}
-                onChange={(e) => setNewLink(e.target.value)} 
-                className="mb-2 p-2 border rounded"
-              />
-              <select 
-                value={selectedLanguage}
-                onChange={(e) => setSelectedLanguage(e.target.value)} 
-                className="w-full p-2 border rounded-md mb-2"
-              >
-                <option value="">Seleccionar idioma</option>
-                <option value="latino">Latino</option>
-                <option value="espanol">Español</option>
-                <option value="subtitulado">Subtitulado</option>
-              </select>
-              <button 
-                onClick={() => addVideo(selectedLanguage)}
-                disabled={!newLink || !newTitle || !selectedLanguage}
-                className="w-full p-2 bg-blue-500 text-white rounded"
-              >
-                + Agregar Video
-              </button>
-            </div>
-          </div>
+<script>
+  let videos = {
+    latino: [],
+    espanol: [],
+    subtitulado: []
+  };
 
-          <div className="p-4">
-            <button
-              onClick={() => {
-                const link = generateCollectorLink();
-                navigator.clipboard.writeText(link);
-                alert('Enlace copiado al portapapeles!');
-              }}
-              className="w-full p-2 bg-green-500 text-white rounded"
-            >
-              Generar Enlace del Recolector
-            </button>
-          </div>
-        </div>
-      );
-    };
+  let currentTab = 'latino';
 
-    // Renderizar el componente VideoCollector
-    ReactDOM.render(<VideoCollector />, document.getElementById('root'));
-  </script>
+  document.getElementById('video-title').addEventListener('input', validateInputs);
+  document.getElementById('video-url').addEventListener('input', validateInputs);
+  document.getElementById('video-language').addEventListener('change', validateInputs);
+  document.getElementById('add-video-button').addEventListener('click', addVideo);
+  document.getElementById('latino-tab').addEventListener('click', () => changeTab('latino'));
+  document.getElementById('espanol-tab').addEventListener('click', () => changeTab('espanol'));
+  document.getElementById('subtitulado-tab').addEventListener('click', () => changeTab('subtitulado'));
+  document.getElementById('generate-link-button').addEventListener('click', generateCollectorLink);
+
+  function validateInputs() {
+    const title = document.getElementById('video-title').value;
+    const url = document.getElementById('video-url').value;
+    const language = document.getElementById('video-language').value;
+    const addButton = document.getElementById('add-video-button');
+    addButton.disabled = !title || !url || !language;
+  }
+
+  function addVideo() {
+    const title = document.getElementById('video-title').value;
+    const url = document.getElementById('video-url').value;
+    const language = document.getElementById('video-language').value;
+
+    if (title && url && language) {
+      videos[language].push({ title, url });
+      updateVideoList();
+      document.getElementById('video-title').value = '';
+      document.getElementById('video-url').value = '';
+      document.getElementById('video-language').value = '';
+      validateInputs();
+    }
+  }
+
+  function changeTab(language) {
+    currentTab = language;
+    const tabs = document.querySelectorAll('.tab-button');
+    tabs.forEach(tab => tab.classList.remove('active'));
+    document.getElementById(`${language}-tab`).classList.add('active');
+    updateVideoList();
+  }
+
+  function updateVideoList() {
+    const videoList = document.getElementById('video-list');
+    videoList.innerHTML = '';
+    videos[currentTab].forEach(video => {
+      const videoItem = document.createElement('div');
+      videoItem.classList.add('video-item');
+      videoItem.textContent = video.title;
+      videoItem.onclick = () => showVideo(video);
+      videoList.appendChild(videoItem);
+    });
+  }
+
+  function showVideo(video) {
+    const videoList = document.getElementById('video-list');
+    const iframe = document.createElement('iframe');
+    iframe.src = video.url;
+    iframe.width = '100%';
+    iframe.height = '400';
+    iframe.allowFullscreen = true;
+
+    const existingIframe = document.querySelector('iframe');
+    if (existingIframe) {
+      existingIframe.replaceWith(iframe);
+    } else {
+      videoList.appendChild(iframe);
+    }
+  }
+
+  function generateCollectorLink() {
+    const data = encodeURIComponent(JSON.stringify(videos));
+    const link = `https://tudominio.com/collector?data=${data}`;
+    navigator.clipboard.writeText(link);
+    alert('Enlace copiado al portapapeles!');
+  }
+</script>
+
 </body>
 </html>
